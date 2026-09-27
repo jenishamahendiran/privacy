@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PrivacyFirst AI</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<aside class="sidebar">
+  <div class="brand">🔐 PrivacyFirst AI</div>
+  <p>Your personal data is masked before AI processing.</p>
+  <button id="newChat">＋ New chat</button>
+  <div class="info">
+    <strong>Privacy controls</strong>
+    <span>PII masking: ON</span>
+    <span>Persistent memory: OFF</span>
+  </div>
+</aside>
+
+<main class="main">
+<header>
+  <div>
+    <h1>Privacy-first chatbot</h1>
+    <p>AI assistance with transparent data handling.</p>
+  </div>
+  <span class="status">● Privacy layer active</span>
+</header>
+
+<section id="chat" class="chat">
+  <div class="message assistant">
+    <div class="bubble">
+      <strong>PrivacyFirst AI</strong>
+      <p>Hi bro 👋 Ask me anything. Supported personal data is masked before AI processing.</p>
+    </div>
+  </div>
+</section>
+
+<form id="chatForm" class="composer">
+  <textarea id="message" rows="1" placeholder="Message PrivacyFirst AI..." required></textarea>
+  <button type="submit">➤</button>
+</form>
+<div class="hint">Enter to send · Shift+Enter for a new line</div>
+</main>
+
+<script>
+const form = document.getElementById("chatForm");
+const input = document.getElementById("message");
+const chat = document.getElementById("chat");
+
+function addMessage(role, text, privacy=false) {
+  const wrap = document.createElement("div");
+  wrap.className = "message " + role;
+  const bubble = document.createElement("div");
+  bubble.className = "bubble";
+
+  const title = document.createElement("strong");
+  title.textContent = role === "user" ? "You" : "PrivacyFirst AI";
+  bubble.appendChild(title);
+
+  const p = document.createElement("p");
+  p.textContent = text;
+  bubble.appendChild(p);
+
+  if (privacy) {
+    const tag = document.createElement("small");
+    tag.textContent = "🔐 Personal data was masked before AI processing";
+    tag.className = "privacy-tag";
+    bubble.appendChild(tag);
+  }
+
+  wrap.appendChild(bubble);
+  chat.appendChild(wrap);
+  chat.scrollTop = chat.scrollHeight;
+}
+
+form.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const text = input.value.trim();
+  if (!text) return;
+
+  addMessage("user", text);
+  input.value = "";
+
+  try {
+    const r = await fetch("/api/chat", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({message: text})
+    });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error || "Request failed");
+    addMessage("assistant", data.answer, data.privacy?.pii_masking_applied);
+  } catch (err) {
+    addMessage("assistant", "Error: " + err.message);
+  }
+});
+
+input.addEventListener("keydown", e => {
+  if (e.key === "Enter" && !e.shiftKey) {
+    e.preventDefault();
+    form.requestSubmit();
+  }
+});
+
+document.getElementById("newChat").addEventListener("click", async () => {
+  try { await fetch("/api/clear", {method: "POST"}); } catch (_) {}
+  chat.innerHTML = "";
+  addMessage("assistant", "New private conversation started. Persistent memory is OFF.");
+});
+</script>
+</body>
+</html>
